@@ -31,6 +31,7 @@ public final class ServerPing {
   private final net.kyori.adventure.text.Component description;
   private final @Nullable Favicon favicon;
   private final @Nullable ModInfo modinfo;
+  private final boolean preventsChatReports = true;
 
   public ServerPing(Version version, @Nullable Players players,
       net.kyori.adventure.text.Component description, @Nullable Favicon favicon) {
