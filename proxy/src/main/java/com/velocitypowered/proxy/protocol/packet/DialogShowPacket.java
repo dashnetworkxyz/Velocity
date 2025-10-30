@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2021 Velocity Contributors
+ * Copyright (C) 2018-2025 Velocity Contributors
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,54 +22,43 @@ import com.velocitypowered.proxy.connection.MinecraftSessionHandler;
 import com.velocitypowered.proxy.protocol.MinecraftPacket;
 import com.velocitypowered.proxy.protocol.ProtocolUtils;
 import com.velocitypowered.proxy.protocol.ProtocolUtils.Direction;
+import com.velocitypowered.proxy.protocol.StateRegistry;
 import io.netty.buffer.ByteBuf;
-import org.checkerframework.checker.nullness.qual.Nullable;
+import net.kyori.adventure.nbt.BinaryTag;
+import net.kyori.adventure.nbt.BinaryTagIO;
 
-public class StatusResponsePacket implements MinecraftPacket {
+public class DialogShowPacket implements MinecraftPacket {
 
-  private @Nullable CharSequence status;
+  private final StateRegistry state;
+  private int id;
+  private BinaryTag nbt;
 
-  public StatusResponsePacket() {
+  public DialogShowPacket(final StateRegistry state) {
+    this.state = state;
   }
 
-  public StatusResponsePacket(CharSequence status) {
-    this.status = status;
-  }
-
-  public String getStatus() {
-    if (status == null) {
-      throw new IllegalStateException("Status is not specified");
+  @Override
+  public void decode(ByteBuf buf, Direction direction, ProtocolVersion protocolVersion) {
+    this.id = this.state == StateRegistry.CONFIG ? 0 : ProtocolUtils.readVarInt(buf);
+    if (this.id == 0) {
+      this.nbt = ProtocolUtils.readBinaryTag(buf, protocolVersion, BinaryTagIO.reader());
     }
-    return status.toString();
   }
 
   @Override
-  public String toString() {
-    return "StatusResponse{"
-        + "status='" + status + '\''
-        + '}';
-  }
-
-  @Override
-  public void decode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion version) {
-    status = ProtocolUtils.readString(buf, Short.MAX_VALUE);
-  }
-
-  @Override
-  public void encode(ByteBuf buf, ProtocolUtils.Direction direction, ProtocolVersion version) {
-    if (status == null) {
-      throw new IllegalStateException("Status is not specified");
+  public void encode(ByteBuf buf, Direction direction, ProtocolVersion protocolVersion) {
+    if (this.state == StateRegistry.CONFIG) {
+      ProtocolUtils.writeBinaryTag(buf, protocolVersion, this.nbt);
+    } else {
+      ProtocolUtils.writeVarInt(buf, this.id);
+      if (this.id == 0) {
+        ProtocolUtils.writeBinaryTag(buf, protocolVersion, this.nbt);
+      }
     }
-    ProtocolUtils.writeString(buf, status);
   }
 
   @Override
   public boolean handle(MinecraftSessionHandler handler) {
     return handler.handle(this);
-  }
-
-  @Override
-  public int encodeSizeHint(Direction direction, ProtocolVersion version) {
-    return ProtocolUtils.stringSizeHint(this.status);
   }
 }
